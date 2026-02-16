@@ -2,110 +2,120 @@ import streamlit as st
 import random
 
 # --- إعدادات الصفحة ---
-st.set_page_config(page_title="Hangman: Ultimate Edition", page_icon="🎮")
+st.set_page_config(page_title="Hangman: Pro Edition", page_icon="🎮")
 
-# --- قاعدة البيانات المطورة ---
-# الهيكل: "الاسم": ["لون الندرة", "النوع/الضرر", "وصف إضافي"]
+# --- قاعدة البيانات ---
 MLBB_DATA = {
-    "Gusion": ["بنفسجي", "ضرر سحري (Magic Damage)", "Assassin/Mage"],
-    "Alucard": ["أزرق", "ضرر جسدي (Physical Damage)", "Fighter/Assassin"],
-    "Karrie": ["بنفسجي", "ضرر حقيقي (True Damage)", "Marksman - Tank Killer"],
-    "Tigreal": ["أزرق", "ضرر جسدي (Physical Damage)", "Tank - Crowd Control"],
-    "Alice": ["بنفسجي", "ضرر سحري (Magic Damage)", "Mage/Tank - Lifesteal"],
-    "Thamuz": ["بنفسجي", "ضرر حقيقي (True Damage)", "Fighter - Lava Lord"]
+    "Gusion": ["ضرر سحري (Magic)", "Assassin/Mage"],
+    "Alucard": ["ضرر جسدي (Physical)", "Fighter/Assassin"],
+    "Karrie": ["ضرر حقيقي (True Damage)", "Marksman"],
+    "Tigreal": ["ضرر جسدي (Physical)", "Tank"],
+    "Alice": ["ضرر سحري (Magic)", "Mage/Tank"],
+    "Thamuz": ["ضرر حقيقي (True Damage)", "Fighter"],
+    "Nana": ["ضرر سحري (Magic)", "Mage/Support"],
+    "Layla": ["ضرر جسدي (Physical)", "Marksman"],
+    "Fanny": ["ضرر جسدي (Physical)", "Assassin"]
 }
 
 CR_DATA = {
-    "P.E.K.K.A": ["بنفسجي", "بطاقة هجومية (Offensive)", "Epic Troop"],
-    "Tesla": ["برتقالي", "مبنى دفاعي (Defensive Building)", "Common Structure"],
-    "Fireball": ["برتقالي", "تعويذة (Spell)", "Rare Damage Spell"],
-    "The Log": ["ملون/خرافي", "تعويذة (Spell)", "Legendary Ground Spell"],
-    "Giant": ["برتقالي", "بطاقة هجومية (Offensive)", "Rare Tank"],
-    "Inferno Tower": ["برتقالي", "مبنى دفاعي (Defensive Building)", "Rare Structure"]
+    "P.E.K.K.A": ["بنفسجي (Epic)", "Troop"],
+    "Tesla": ["أزرق (Common)", "Building"],
+    "Fireball": ["برتقالي (Rare)", "Spell"],
+    "The Log": ["ملون (Legendary)", "Spell"],
+    "Giant": ["برتقالي (Rare)", "Tank"],
+    "Inferno Tower": ["برتقالي (Rare)", "Building"],
+    "Mega Knight": ["ملون (Legendary)", "Troop"]
 }
 
-# --- تهيئة حالة اللعبة ---
+# --- دالة البدء ---
+def start_game(category, attempts):
+    st.session_state.category = category
+    data_source = MLBB_DATA if category == "MLBB Characters" else CR_DATA
+    word, info = random.choice(list(data_source.items()))
+    st.session_state.word = word.upper()
+    st.session_state.main_hint = info[0] # اللون للكروت والنوع للشخصيات
+    st.session_state.guessed_letters = []
+    st.session_state.wrong_letters = []
+    st.session_state.attempts = attempts
+    st.session_state.max_attempts = attempts
+    st.session_state.game_started = True
+    st.session_state.show_first_letter = False
+
+# --- تهيئة الحالة ---
 if 'game_started' not in st.session_state:
     st.session_state.game_started = False
     st.session_state.score = 100
 
-def start_game(category, attempts):
-    data_source = MLBB_DATA if category == "MLBB Characters" else CR_DATA
-    word, info = random.choice(list(data_source.items()))
-    st.session_state.word = word.upper()
-    st.session_state.color = info[0]
-    st.session_state.type_info = info[1]
-    st.session_state.guessed_letters = []
-    st.session_state.attempts = attempts
-    st.session_state.max_attempts = attempts
-    st.session_state.game_started = True
-    st.session_state.show_type = False
-    st.session_state.show_first_letter = False
-
-# --- الواجهة الرئيسية ---
+# --- الواجهة الجانبية ---
 with st.sidebar:
-    st.title(f"💰 رصيدك: {st.session_state.score}")
-    if st.button("🔄 العودة للقائمة"):
+    st.title(f"💰 الرصيد: {st.session_state.score}")
+    if st.button("🔄 العودة للقائمة الرئيسية"):
         st.session_state.game_started = False
         st.rerun()
 
+# --- واجهة الإعدادات ---
 if not st.session_state.game_started:
-    st.title("🏹 متجر التحدي: هانغ مان")
-    category = st.selectbox("اختر القائمة:", ["MLBB Characters", "CR Cards"])
-    attempts = st.slider("عدد المحاولات:", 3, 10, 7)
+    st.title("🏹 تحدي هانغ مان الذكي")
+    cat = st.selectbox("اختر عالمك:", ["MLBB Characters", "CR Cards"])
+    att = st.slider("عدد المحاولات:", 3, 12, 7)
     if st.button("🚀 ابدأ اللعب", use_container_width=True):
-        start_game(category, attempts)
+        start_game(cat, att)
         st.rerun()
+
+# --- واجهة اللعب ---
 else:
-    st.title("🎮 خمن الكلمة")
+    st.title("🎮 خمن الآن")
     
-    # --- نظام المساعدة المطور ---
-    st.write(f"🎨 **لون الندرة:** {st.session_state.color}")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        if not st.session_state.show_type:
-            if st.button("🔍 كشف النوع (-10 نقاط)"):
-                if st.session_state.score >= 10:
-                    st.session_state.score -= 10
-                    st.session_state.show_type = True
-                    st.rerun()
-        else:
-            st.info(f"⚡ النوع: {st.session_state.type_info}")
+    # ميزة التلميح التلقائي حسب النوع
+    if st.session_state.category == "MLBB Characters":
+        st.info(f"⚡ **نوع الضرر:** {st.session_state.main_hint}")
+    else:
+        st.info(f"🎨 **لون الندرة:** {st.session_state.main_hint}")
 
-    with col2:
-        if not st.session_state.show_first_letter:
-            if st.button("🔡 أول حرف (-20 نقطة)"):
-                if st.session_state.score >= 20:
-                    st.session_state.score -= 20
-                    st.session_state.show_first_letter = True
-                    st.rerun()
-        else:
-            st.warning(f"🅰️ يبدأ بحرف: {st.session_state.word[0]}")
+    # زر شراء الحرف الأول
+    if not st.session_state.show_first_letter:
+        if st.button("🔡 شراء أول حرف (-20💰)"):
+            if st.session_state.score >= 20:
+                st.session_state.score -= 20
+                st.session_state.show_first_letter = True
+                st.rerun()
+    else:
+        st.warning(f"🅰️ أول حرف هو: {st.session_state.word[0]}")
 
-    # عرض الكلمة والمحاولات
+    # عرض الكلمة
     display_word = "".join([c + " " if c in st.session_state.guessed_letters or not c.isalpha() else "_ " for c in st.session_state.word])
-    st.header(f"`{display_word}`")
-    st.progress(st.session_state.attempts / st.session_state.max_attempts, text=f"❤️ المحاولات: {st.session_state.attempts}")
+    st.markdown(f"<h1 style='text-align: center; font-size: 50px;'>{display_word}</h1>", unsafe_allow_html=True)
 
-    letter = st.text_input("أدخل حرفاً:").upper()
-    if st.button("تأكيد"):
-        if letter and letter not in st.session_state.guessed_letters:
-            st.session_state.guessed_letters.append(letter)
-            if letter not in st.session_state.word:
+    # عرض الحروف الخاطئة
+    if st.session_state.wrong_letters:
+        st.write(f"❌ **حروف خاطئة جربتها:** {', '.join(st.session_state.wrong_letters)}")
+
+    st.progress(st.session_state.attempts / st.session_state.max_attempts, text=f"❤️ المحاولات المتبقية: {st.session_state.attempts}")
+
+    # إدخال الحرف مع المسح التلقائي
+    with st.form(key='input_form', clear_on_submit=True):
+        letter = st.text_input("أدخل حرفاً واحداً:").upper()
+        submit = st.form_submit_button("تأكيد الحرف ✅")
+
+    if submit and letter:
+        if letter.isalpha() and letter not in st.session_state.guessed_letters and letter not in st.session_state.wrong_letters:
+            if letter in st.session_state.word:
+                st.session_state.guessed_letters.append(letter)
+            else:
+                st.session_state.wrong_letters.append(letter)
                 st.session_state.attempts -= 1
         st.rerun()
 
-    # النتائج
+    # التحقق من النهاية
     if all(c in st.session_state.guessed_letters or not c.isalpha() for c in st.session_state.word):
         st.balloons()
-        st.success(f"🏆 فوز! الكلمة: {st.session_state.word}")
-        if st.button("جولة جديدة (+30 نقطة)"):
+        st.success(f"🏆 مذهل! الكلمة هي: {st.session_state.word}")
+        if st.button("جولة جديدة (+30💰)"):
             st.session_state.score += 30
             st.session_state.game_started = False
             st.rerun()
     elif st.session_state.attempts <= 0:
-        st.error(f"💀 خسرت! الكلمة: {st.session_state.word}")
-        if st.button("إعادة المحاولة"):
+        st.error(f"💀 حظاً أوفر! الكلمة كانت: {st.session_state.word}")
+        if st.button("حاول مرة أخرى"):
             st.session_state.game_started = False
             st.rerun()
